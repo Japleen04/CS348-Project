@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Recipe Manager</title>
+    <style>
+        /* Basic reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            color: #444;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 5px;
+        }
+
+        /* Container for layout */
+        .container {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        section {
+            flex: 1;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            cursor: pointer;
+            padding: 10px;
+            background-color: #e8f5ff;
+            border-radius: 5px;
+            margin-bottom: 5px;
+            transition: background-color 0.3s;
+        }
+
+        li:hover {
+            background-color: #b3e5fc;
+        }
+
+        #recipeDetails p {
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+
+        /* Form styling */
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        input[type="text"],
+        textarea,
+        input[type="number"] {
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+            width: 100%;
+        }
+
+        textarea {
+            resize: vertical;
+            height: 80px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        /* Delete and edit buttons */
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn-group button {
+            flex: 1;
+        }
+
+        .delete-btn {
+            background-color: #f44336;
+        }
+
+        .delete-btn:hover {
+            background-color: #e53935;
+        }
+
+        .edit-btn {
+            background-color: #2196F3;
+        }
+
+        .edit-btn:hover {
+            background-color: #1e88e5;
+        }
+
+        /* Two-column form layout */
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* Two equal columns */
+            gap: 20px;
+        }
+
+        .left-column, .right-column {
+            display: flex;
+            flex-direction: column;
+        }
+
+    </style>
+    <script>
+        async function loadRecipes(category = '') {
+            const response = await fetch(`/recipes?category=${category}`);
+            const data = await response.json();
+            const recipeList = document.getElementById('recipeList');
+            recipeList.innerHTML = data.recipes.map(recipe =>
+                `<li onclick="viewRecipe(${recipe.id})">${recipe.title}</li>`
+            ).join('');
+        }
+
+        async function viewRecipe(id) {
+            const response = await fetch(`/recipes/${id}`);
+            const recipe = await response.json();
+            document.getElementById('recipeDetails').innerHTML = `
+                <h3>${recipe.title}</h3>
+                <p><strong>Ingredients:</strong> ${recipe.ingredients}</p>
+                <p><strong>Instructions:</strong> ${recipe.instructions}</p>
+                <p><strong>Prep Time:</strong> ${recipe.prep_time} minutes</p>
+                <p><strong>Cook Time:</strong> ${recipe.cook_time} minutes</p>
+                <p><strong>Servings:</strong> ${recipe.servings}</p>
+                <p><strong>Category:</strong> ${recipe.category}</p>
+                <div class="btn-group">
+                    <button class="delete-btn" onclick="deleteRecipe(${recipe.id})">Delete</button>
+                    <button class="edit-btn" onclick="editRecipe(${recipe.id})">Edit</button>
+                </div>
+            `;
+        }
+
+        async function addRecipe(event) {
+            event.preventDefault();
+            const title = document.getElementById('title').value;
+            const ingredients = document.getElementById('ingredients').value;
+            const instructions = document.getElementById('instructions').value;
+            const prep_time = document.getElementById('prep_time').value;
+            const cook_time = document.getElementById('cook_time').value;
+            const servings = document.getElementById('servings').value;
+            const category = document.getElementById('category').value;
+
+            const response = await fetch('/recipes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title,
+                    ingredients,
+                    instructions,
+                    prep_time: prep_time ? parseInt(prep_time) : null,
+                    cook_time: cook_time ? parseInt(cook_time) : null,
+                    servings: servings ? parseInt(servings) : null,
+                    category
+                })
+            });
+            if (response.ok) {
+                loadRecipes();
+                document.getElementById('recipeForm').reset();
+            }
+        }
+
+        async function deleteRecipe(id) {
+            const response = await fetch(`/recipes/${id}`, { method: 'DELETE' });
+            if (response.ok) {
+                loadRecipes();
+                document.getElementById('recipeDetails').innerHTML = '';
+            }
+        }
+
+        async function editRecipe(id) {
+            const response = await fetch(`/recipes/${id}`);
+            const recipe = await response.json();
+            document.getElementById('title').value = recipe.title;
+            document.getElementById('ingredients').value = recipe.ingredients;
+            document.getElementById('instructions').value = recipe.instructions;
+            document.getElementById('prep_time').value = recipe.prep_time || '';
+            document.getElementById('cook_time').value = recipe.cook_time || '';
+            document.getElementById('servings').value = recipe.servings || '';
+            document.getElementById('category').value = recipe.category || '';
+
+            document.getElementById('submitBtn').onclick = async function (event) {
+                event.preventDefault();
+                await fetch(`/recipes/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title: document.getElementById('title').value,
+                        ingredients: document.getElementById('ingredients').value,
+                        instructions: document.getElementById('instructions').value,
+                        prep_time: document.getElementById('prep_time').value,
+                        cook_time: document.getElementById('cook_time').value,
+                        servings: document.getElementById('servings').value,
+                        category: document.getElementById('category').value
+                    })
+                });
+                loadRecipes();
+                document.getElementById('recipeForm').reset();
+                document.getElementById('submitBtn').onclick = addRecipe;
+            };
+        }
+
+        async function loadCategories() {
+            // Fetch distinct categories from the server
+            const response = await fetch('/categories');
+            const data = await response.json();
+            const categoryDropdown = document.getElementById('categoryFilter');
+
+            categoryDropdown.innerHTML = `
+                <option value="">All Categories</option>
+                ${data.categories.map(category => `<option value="${category}">${category}</option>`).join('')}
+            `;
+        }
+
+        async function generateReport(category) {
+            const response = await fetch(`/recipes/report?category=${category}`);
+            const report = await response.json();
+            document.getElementById('report').innerHTML = `
+                <h3>Report for Category: "${category}"</h3>
+                <p><strong>Number of Recipes:</strong> ${report.count}</p>
+                <p><strong>Average Prep Time:</strong> ${report.avg_prep_time} minutes</p>
+                <p><strong>Average Cook Time:</strong> ${report.avg_cook_time} minutes</p>
+                <p><strong>Average Servings:</strong> ${report.avg_servings}</p>
+                <p><strong>Max Total Time:</strong> ${report.max_total_time} minutes</p>
+                <p><strong>Min Total Time:</strong> ${report.min_total_time} minutes</p>
+            `;
+        }
+
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadCategories();
+            await loadRecipes();
+
+            document.getElementById('categoryFilter').addEventListener('change', async function () {
+                const category = this.value;
+                if (category) {
+                    await loadRecipes(category);
+                    await generateReport(category);
+                } else {
+                    await loadRecipes();
+                    document.getElementById('report').innerText = '';
+                }
+            });
+        });
+    </script>
+</head>
+
+<body>
+    <h1>Personal Recipe Manager</h1>
+    
+    <div class="container">
+        <section>
+            <h2>Recipes</h2>
+            <select id="categoryFilter">
+                <option value="">All Categories</option>
+                <!-- Categories will be dynamically populated here -->
+            </select>
+            <ul id="recipeList"></ul>
+            <div id="report"></div>
+        </section>
+        
+        <section>
+            <h2>Recipe Details</h2>
+            <div id="recipeDetails">
+                <p>Select a recipe to see details here.</p>
+            </div>
+        </section>
+    </div>
+
+    <section>
+        <h2>Add/Edit Recipe</h2>
+        <form id="recipeForm" onsubmit="addRecipe(event)">
+            <div class="form-row">
+                <!-- Left Column: Title, Ingredients, Instructions -->
+                <div class="left-column">
+                    <label for="title">Title</label>
+                    <input type="text" id="title" required>
+                    
+                    <label for="ingredients">Ingredients</label>
+                    <textarea id="ingredients" required></textarea>
+                    
+                    <label for="instructions">Instructions</label>
+                    <textarea id="instructions" required></textarea>
+                </div>
+
+                <!-- Right Column: Prep Time, Cook Time, Servings -->
+                <div class="right-column">
+                    <label for="prep_time">Prep Time (minutes)</label>
+                    <input type="number" id="prep_time">
+                    
+                    <label for="cook_time">Cook Time (minutes)</label>
+                    <input type="number" id="cook_time">
+                    
+                    <label for="servings">Servings</label>
+                    <input type="number" id="servings">
+
+                    <label for="category">Category</label>
+                    <input type="text" id="category">
+                </div>
+            </div>
+            <button type="submit" id="submitBtn">Add Recipe</button>
+        </form>
+    </section>
+</body>
+
+</html>
